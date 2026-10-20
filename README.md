@@ -1,5 +1,8 @@
 # AI Agent Lab
 
+[![CI](https://github.com/buahixunyu/ai-agent-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/buahixunyu/ai-agent-lab/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 一个基于 **Nuxt 4 + Vue 3 + TypeScript** 的流式 AI 对话应用，接入 DeepSeek（OpenAI 兼容接口）。
 
 从「输入框 → 服务端路由 → 大模型 SSE 流 → 浏览器逐字渲染」的最小可运行闭环，
