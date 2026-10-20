@@ -5,6 +5,12 @@ export interface ChatMessage {
   content: string
 }
 
+export interface TokenUsage {
+  prompt: number
+  completion: number
+  total: number
+}
+
 /**
  * 流式对话的核心逻辑（全项目最值得读的一段代码）。
  *
@@ -19,6 +25,11 @@ export function useChatStream() {
   const streaming = ref(false)
   const error = ref('')
 
+  // 本次调用的 token 用量（来自上游最后一个 chunk 的 usage 字段）
+  const usage = ref<TokenUsage | null>(null)
+  // 本次调用耗时（秒）
+  const elapsed = ref(0)
+
   let controller: AbortController | null = null
 
   async function send(text: string) {
@@ -26,6 +37,10 @@ export function useChatStream() {
     if (!input || streaming.value) return
 
     error.value = ''
+    usage.value = null
+    elapsed.value = 0
+    const startedAt = performance.now()
+
     messages.value.push({ role: 'user', content: input })
 
     // 先插一条空的 assistant 占位，边收边填
@@ -44,8 +59,12 @@ export function useChatStream() {
       })
 
       if (!res.ok) {
-        const detail = await res.text().catch(() => '')
-        throw new Error(`请求失败 ${res.status}：${detail.slice(0, 200)}`)
+        // 服务端返回的是 JSON（h3 的 error 结构），解析后只取人话部分
+        const data = (await res.json().catch(() => null)) as {
+          statusMessage?: string
+          message?: string
+        } | null
+        throw new Error(data?.statusMessage || data?.message || `请求失败 ${res.status}`)
       }
       if (!res.body) throw new Error('响应体为空')
 
@@ -70,6 +89,17 @@ export function useChatStream() {
 
           try {
             const json = JSON.parse(data)
+
+            // 开了 stream_options.include_usage 后，最后一个 chunk 的 choices 是空数组，
+            // 但会带 usage —— 所以这里和下面取 delta 是两个独立的判断
+            if (json?.usage) {
+              usage.value = {
+                prompt: json.usage.prompt_tokens ?? 0,
+                completion: json.usage.completion_tokens ?? 0,
+                total: json.usage.total_tokens ?? 0
+              }
+            }
+
             const delta: string | undefined = json?.choices?.[0]?.delta?.content
             if (delta) assistant.content += delta
           } catch {
@@ -87,6 +117,7 @@ export function useChatStream() {
         if (!assistant.content) messages.value.pop()
       }
     } finally {
+      elapsed.value = (performance.now() - startedAt) / 1000
       streaming.value = false
       controller = null
     }
@@ -100,7 +131,9 @@ export function useChatStream() {
     if (streaming.value) controller?.abort()
     messages.value = []
     error.value = ''
+    usage.value = null
+    elapsed.value = 0
   }
 
-  return { messages, streaming, error, send, stop, reset }
+  return { messages, streaming, error, usage, elapsed, send, stop, reset }
 }

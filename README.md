@@ -20,6 +20,7 @@
 - [x] Markdown 渲染（代码块、列表、链接）
 - [x] 错误提示与空状态引导
 - [x] 响应式布局，移动端可用
+- [x] 显示每次回复的耗时与 token 用量
 - [x] Docker 一键部署
 - [ ] RAG 知识库 + 引用溯源（计划中）
 - [ ] 工具调用（Function Calling）（计划中）
@@ -144,7 +145,7 @@ while (true) {
 
 - [ ] Markdown 用简易正则过滤 XSS，生产应换 `DOMPurify`
 - [ ] 没有对话持久化（刷新即丢），后续接 SQLite / PostgreSQL
-- [ ] 没有 token 用量统计和成本估算
+- [x] token 用量统计已实现（`stream_options.include_usage`），成本估算待补
 - [ ] 没有移动端输入法兼容性测试
 - [ ] 没有单元测试
 

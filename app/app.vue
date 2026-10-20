@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { marked } from 'marked'
 
-const { messages, streaming, error, send, stop, reset } = useChatStream()
+const { messages, streaming, error, usage, elapsed, send, stop, reset } = useChatStream()
 
 const draft = ref('')
 const listEl = ref<HTMLElement | null>(null)
@@ -105,6 +105,14 @@ function fillExample(text: string) {
           <div v-if="msg.role === 'user'" class="plain">{{ msg.content }}</div>
           <div v-else class="markdown" v-html="render(msg.content)" />
           <span v-if="streaming && index === messages.length - 1" class="caret" />
+          <div
+            v-if="!streaming && index === messages.length - 1 && (usage || elapsed)"
+            class="stats"
+          >
+            <span>{{ elapsed.toFixed(1) }}s</span>
+            <span v-if="usage"> · 输入 {{ usage.prompt }} / 输出 {{ usage.completion }} tokens</span>
+            <span> · {{ msg.content.length }} 字</span>
+          </div>
         </div>
       </div>
 
@@ -293,6 +301,14 @@ function fillExample(text: string) {
 
 .plain {
   white-space: pre-wrap;
+}
+
+.stats {
+  display: block;
+  margin-top: 8px;
+  font-size: 11.5px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
 }
 
 .caret {

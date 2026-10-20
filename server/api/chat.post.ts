@@ -34,15 +34,28 @@ export default defineEventHandler(async (event) => {
       model: config.deepseek.model,
       messages,
       stream: true,
-      temperature: 0.7
+      temperature: 0.7,
+      stream_options: { include_usage: true }
     })
   })
 
   if (!upstream.ok || !upstream.body) {
+    // 原始错误只写进服务端日志，不要把上游的 JSON（可能带 Key 提示）透给前端
     const detail = await upstream.text().catch(() => '')
+    console.error('[api] DeepSeek 调用失败:', upstream.status, detail.slice(0, 300))
+
+    const friendly: Record<number, string> = {
+      400: '请求格式有误，请检查消息内容',
+      401: 'API Key 无效，请检查 .env 中的 NUXT_DEEPSEEK_API_KEY',
+      402: '账户余额不足，请前往 DeepSeek 控制台充值',
+      429: '请求太频繁，请稍后再试',
+      500: '模型服务异常，请稍后重试',
+      503: '模型服务繁忙，请稍后重试'
+    }
+
     throw createError({
-      statusCode: 502,
-      statusMessage: `DeepSeek 调用失败: ${upstream.status} ${detail.slice(0, 300)}`
+      statusCode: upstream.status === 401 ? 401 : 502,
+      statusMessage: friendly[upstream.status] ?? `模型服务返回 ${upstream.status}，请稍后重试`
     })
   }
 
